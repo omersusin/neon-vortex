@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="deep_space">#FF0A0A2E</color>
+    <color name="cyan_neon">#FF00FFFF</color>
+    <color name="magenta_neon">#FFFF00FF</color>
+    <color name="gold">#FFFFD700</color>
+    <color name="danger">#FFFF4444</color>
+</resources>

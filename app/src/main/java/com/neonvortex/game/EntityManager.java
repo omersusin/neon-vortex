@@ -15,31 +15,34 @@ public class EntityManager {
     private final Random rand=new Random();
     private android.os.Vibrator vib;
 
-    public EntityManager(GameState gs, PaintFactory pf, ParticleSystem ps) {
-        this.gs=gs; this.pf=pf; this.ps=ps;
+    public EntityManager(GameState gs,PaintFactory pf,ParticleSystem ps){
+        this.gs=gs;this.pf=pf;this.ps=ps;
     }
 
     public void setVibrator(android.os.Vibrator v){this.vib=v;}
-    private void vib(long ms){try{if(vib!=null)vib.vibrate(ms);}catch(Exception e){}}
+    private void vib(long ms){
+        if(gs.vibEnabled())try{if(vib!=null)vib.vibrate(ms);}catch(Exception e){}
+    }
 
-    public void spawnObstacle() {
+    public void spawnObstacle(){
+        float sm=gs.spawnMult();
         float[] o=new float[8];
         o[0]=rand.nextFloat()*360;o[1]=rand.nextBoolean()?1:0;
-        o[2]=(rand.nextFloat()*0.8f+0.3f)*(rand.nextBoolean()?1:-1);
+        o[2]=(rand.nextFloat()*0.8f+0.3f)*(rand.nextBoolean()?1:-1)*sm;
         o[3]=20+rand.nextFloat()*30;o[4]=300+rand.nextFloat()*200;
         o[5]=0;o[6]=0;o[7]=0;
-        if(gs.playTime>1800&&rand.nextFloat()<0.15f){
+        if(gs.playTime>1800/sm&&rand.nextFloat()<0.15f*sm){
             o[6]=1;o[3]=15+rand.nextFloat()*20;o[4]=80+rand.nextFloat()*60;o[7]=o[4];
         }
         gs.obstacles.add(o);
-        if(gs.playTime>600&&rand.nextFloat()<0.3f){
+        if(gs.playTime>600/sm&&rand.nextFloat()<0.3f*sm){
             float[] o2=new float[8];
             o2[0]=(o[0]+120+rand.nextFloat()*120)%360;o2[1]=o[1]==1?0:1;
-            o2[2]=(rand.nextFloat()*0.6f+0.3f)*(rand.nextBoolean()?1:-1);
+            o2[2]=(rand.nextFloat()*0.6f+0.3f)*(rand.nextBoolean()?1:-1)*sm;
             o2[3]=20+rand.nextFloat()*25;o2[4]=300;o2[5]=0;o2[6]=0;o2[7]=0;
             gs.obstacles.add(o2);
         }
-        if(gs.playTime>1200&&rand.nextFloat()<0.2f){
+        if(gs.playTime>1200/sm&&rand.nextFloat()<0.2f*sm){
             float[] o3=new float[8];
             o3[0]=(o[0]+180)%360;o3[1]=o[1];o3[2]=-o[2];
             o3[3]=25+rand.nextFloat()*20;o3[4]=250;o3[5]=0;o3[6]=0;o3[7]=0;
@@ -47,27 +50,25 @@ public class EntityManager {
         }
     }
 
-    public void spawnOrb() {
+    public void spawnOrb(){
         gs.orbs.add(new float[]{rand.nextFloat()*360,rand.nextBoolean()?1:0,
             (rand.nextFloat()*0.4f+0.2f)*(rand.nextBoolean()?1:-1),rand.nextFloat()*6.28f,400});
     }
 
-    public void spawnDiamond() {
+    public void spawnDiamond(){
         gs.diamonds.add(new float[]{rand.nextFloat()*360,rand.nextBoolean()?1:0,
             (rand.nextFloat()*0.3f+0.1f)*(rand.nextBoolean()?1:-1),rand.nextFloat()*6.28f,350});
     }
 
-    public void spawnPowerup() {
+    public void spawnPowerup(){
         gs.powerups.add(new float[]{rand.nextFloat()*360,rand.nextBoolean()?1:0,
             (rand.nextFloat()*0.3f+0.1f)*(rand.nextBoolean()?1:-1),rand.nextInt(3),500,0});
     }
 
-    public boolean updateObstacles(float tm, float px, float py, float feverMult) {
+    public boolean updateObstacles(float tm,float px,float py,float feverMult){
         Iterator<float[]> oi=gs.obstacles.iterator();
-        while(oi.hasNext()){
-            float[] o=oi.next();
-            o[0]+=o[2]*tm;
-            if(o[0]>=360)o[0]-=360;if(o[0]<0)o[0]+=360;
+        while(oi.hasNext()){float[] o=oi.next();
+            o[0]+=o[2]*tm;if(o[0]>=360)o[0]-=360;if(o[0]<0)o[0]+=360;
             if(--o[4]<=0){oi.remove();continue;}
             if(o[6]==1){o[7]-=1;if(o[7]<=0){oi.remove();continue;}}
             if((o[1]==1)==gs.playerOnOuter){
@@ -80,7 +81,7 @@ public class EntityManager {
                         ps.addPopup(px,py-50,"SHIELD!",0xFF4488FF);
                         oi.remove();vib(40);continue;
                     }
-                    return true; // player died
+                    return true;
                 }
                 if(ad<half+10&&o[5]==0){
                     o[5]=1;gs.totalNearMiss++;
@@ -97,10 +98,9 @@ public class EntityManager {
         return false;
     }
 
-    public void updateOrbs(float tm, float feverMult) {
+    public void updateOrbs(float tm,float feverMult){
         Iterator<float[]> ri=gs.orbs.iterator();
-        while(ri.hasNext()){
-            float[] o=ri.next();
+        while(ri.hasNext()){float[] o=ri.next();
             o[0]+=o[2]*tm;if(o[0]>=360)o[0]-=360;
             o[3]+=0.1f;if(--o[4]<=0){ri.remove();continue;}
             if((o[1]==1)==gs.playerOnOuter&&Math.abs(gs.normAngle(gs.playerAngle-o[0]))<12){
@@ -115,10 +115,9 @@ public class EntityManager {
         }
     }
 
-    public void updateDiamonds(float tm, float feverMult) {
+    public void updateDiamonds(float tm,float feverMult){
         Iterator<float[]> di=gs.diamonds.iterator();
-        while(di.hasNext()){
-            float[] d=di.next();
+        while(di.hasNext()){float[] d=di.next();
             d[0]+=d[2]*tm;if(d[0]>=360)d[0]-=360;
             d[3]+=0.12f;if(--d[4]<=0){di.remove();continue;}
             if((d[1]==1)==gs.playerOnOuter&&Math.abs(gs.normAngle(gs.playerAngle-d[0]))<14){
@@ -135,15 +134,13 @@ public class EntityManager {
         }
     }
 
-    public void updatePowerups(float tm) {
+    public void updatePowerups(float tm){
         Iterator<float[]> pi=gs.powerups.iterator();
-        while(pi.hasNext()){
-            float[] pw=pi.next();
+        while(pi.hasNext()){float[] pw=pi.next();
             pw[0]+=pw[2]*tm;if(pw[0]>=360)pw[0]-=360;
             pw[5]+=0.08f;if(--pw[4]<=0){pi.remove();continue;}
             if((pw[1]==1)==gs.playerOnOuter&&Math.abs(gs.normAngle(gs.playerAngle-pw[0]))<15){
-                int t=(int)pw[3];
-                float pR=(pw[1]==1)?gs.outerRadius:gs.innerRadius;
+                int t=(int)pw[3];float pR=(pw[1]==1)?gs.outerRadius:gs.innerRadius;
                 float pwx=gs.centerX+pR*gs.cos(pw[0]),pwy=gs.centerY+pR*gs.sin(pw[0]);
                 if(t==0){gs.shieldActive=true;gs.shieldTimer=300;
                     for(int i=0;i<20;i++)ps.spawnParticle(pwx,pwy,0xFF4488FF,false);
@@ -160,7 +157,7 @@ public class EntityManager {
         }
     }
 
-    public void applyMagnet() {
+    public void applyMagnet(){
         if(!gs.magnetActive)return;
         for(float[] o:gs.orbs)
             if((o[1]==1)==gs.playerOnOuter)o[0]+=gs.normAngle(gs.playerAngle-o[0])*0.05f;
@@ -168,7 +165,7 @@ public class EntityManager {
             if((d[1]==1)==gs.playerOnOuter)d[0]+=gs.normAngle(gs.playerAngle-d[0])*0.05f;
     }
 
-    public void drawObstacles(Canvas c) {
+    public void drawObstacles(Canvas c){
         for(float[] o:gs.obstacles){
             float rad=o[1]==1?gs.outerRadius:gs.innerRadius;
             float start=o[0]-o[3]/2;
@@ -195,7 +192,7 @@ public class EntityManager {
         }
     }
 
-    public void drawOrbs(Canvas c) {
+    public void drawOrbs(Canvas c){
         for(float[] o:gs.orbs){
             float rad=o[1]==1?gs.outerRadius:gs.innerRadius;
             float ox=gs.centerX+rad*gs.cos(o[0]),oy=gs.centerY+rad*gs.sin(o[0]);
@@ -208,7 +205,7 @@ public class EntityManager {
         }
     }
 
-    public void drawDiamonds(Canvas c) {
+    public void drawDiamonds(Canvas c){
         for(float[] d:gs.diamonds){
             float rad=d[1]==1?gs.outerRadius:gs.innerRadius;
             float dx=gs.centerX+rad*gs.cos(d[0]),dy=gs.centerY+rad*gs.sin(d[0]);
@@ -225,13 +222,12 @@ public class EntityManager {
         }
     }
 
-    public void drawPowerups(Canvas c) {
+    public void drawPowerups(Canvas c){
         int[] colors={0xFF4488FF,0xFF44FF44,0xFFFFAA00};
         String[] labels={"S","T","M"};
         Paint pp=pf.makePaint(Color.WHITE,Paint.Style.FILL,0);
         Paint pl=pf.makeText(Color.WHITE,gs.playerSize,true);
-        for(float[] pw:gs.powerups){
-            int t=(int)pw[3];
+        for(float[] pw:gs.powerups){int t=(int)pw[3];
             float rad=pw[1]==1?gs.outerRadius:gs.innerRadius;
             float px=gs.centerX+rad*gs.cos(pw[0]),py=gs.centerY+rad*gs.sin(pw[0]);
             float p=(float)(1+0.3*Math.sin(pw[5])),sz=gs.playerSize*1.1f*p;

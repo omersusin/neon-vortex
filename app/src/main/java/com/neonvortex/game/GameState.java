@@ -3,9 +3,10 @@ package com.neonvortex.game;
 import java.util.ArrayList;
 
 public class GameState {
-    public static final int STATE_MENU=0, STATE_PLAYING=1, STATE_GAME_OVER=2, STATE_PAUSED=3;
+    public static final int STATE_MENU=0, STATE_PLAYING=1, STATE_GAME_OVER=2, STATE_PAUSED=3, STATE_SETTINGS=4;
     public static final long DOUBLE_TAP_TIME=250;
 
+    public Settings settings;
     public int gameState=STATE_MENU;
     public int screenW, screenH;
     public float centerX, centerY, innerRadius, outerRadius;
@@ -43,28 +44,26 @@ public class GameState {
     public float[][] stars;
 
     public void initScreen(int w, int h) {
-        screenW=w; screenH=h;
-        centerX=w/2f; centerY=h/2f;
-        innerRadius=w*0.25f; outerRadius=w*0.40f;
-        playerSize=w*0.025f;
+        screenW=w;screenH=h;centerX=w/2f;centerY=h/2f;
+        innerRadius=w*0.25f;outerRadius=w*0.40f;playerSize=w*0.025f;
     }
 
     public void reset() {
         gameState=STATE_PLAYING;
-        score=0; combo=0; comboTimer=0; scoreMultiplier=1;
-        playTime=0; currentSpeed=baseSpeed; playerAngle=0;
-        playerOnOuter=false; moveDirection=1; reverseFlash=0;
-        feverMode=false; feverHue=0; feverFlash=0;
-        obstacles.clear(); orbs.clear(); diamonds.clear();
-        particles.clear(); trail.clear();
-        popups.clear(); popupTexts.clear(); powerups.clear();
-        obstacleTimer=0; orbTimer=0; powerupTimer=0; diamondTimer=0;
-        shakeMag=0; nearMissFlash=0; nearMissTextTimer=0;
-        deathFlash=0; shieldActive=false; shieldTimer=0;
-        slowmoActive=false; slowmoTimer=0;
-        magnetActive=false; magnetTimer=0;
-        totalOrbs=0; totalNearMiss=0; totalReverse=0; totalDiamonds=0;
-        level=1; levelPopTimer=0; bgHue=0; isNewBest=false;
+        score=0;combo=0;comboTimer=0;scoreMultiplier=1;
+        playTime=0;currentSpeed=baseSpeed;playerAngle=0;
+        playerOnOuter=false;moveDirection=1;reverseFlash=0;
+        feverMode=false;feverHue=0;feverFlash=0;
+        obstacles.clear();orbs.clear();diamonds.clear();
+        particles.clear();trail.clear();
+        popups.clear();popupTexts.clear();powerups.clear();
+        obstacleTimer=0;orbTimer=0;powerupTimer=0;diamondTimer=0;
+        shakeMag=0;nearMissFlash=0;nearMissTextTimer=0;
+        deathFlash=0;shieldActive=false;shieldTimer=0;
+        slowmoActive=false;slowmoTimer=0;
+        magnetActive=false;magnetTimer=0;
+        totalOrbs=0;totalNearMiss=0;totalReverse=0;totalDiamonds=0;
+        level=1;levelPopTimer=0;bgHue=0;isNewBest=false;
     }
 
     public float cos(float d){return(float)Math.cos(Math.toRadians(d));}
@@ -79,4 +78,9 @@ public class GameState {
     public int hsvColor(float h,float s,float v){
         return android.graphics.Color.HSVToColor(new float[]{h%360,s,v});
     }
+    public boolean vibEnabled(){return settings==null||settings.vibrationEnabled;}
+    public float speedMult(){return settings==null?1f:settings.speedMult;}
+    public float spawnMult(){return settings==null?1f:settings.spawnMult;}
+    public boolean isDark(){return settings==null||settings.darkMode;}
+    public boolean trailOn(){return settings==null||settings.trailEnabled;}
 }

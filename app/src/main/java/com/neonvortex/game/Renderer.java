@@ -11,11 +11,9 @@ public class Renderer {
     private final PaintFactory pf;
     private final Random rand=new Random();
 
-    public Renderer(GameState gs, PaintFactory pf) {
-        this.gs=gs; this.pf=pf;
-    }
+    public Renderer(GameState gs,PaintFactory pf){this.gs=gs;this.pf=pf;}
 
-    public void initStars() {
+    public void initStars(){
         gs.stars=new float[150][3];
         for(int i=0;i<150;i++){
             gs.stars[i][0]=rand.nextFloat()*gs.screenW;
@@ -24,40 +22,48 @@ public class Renderer {
         }
     }
 
-    public void drawBackground(Canvas c) {
-        int bgR=(int)(10+8*Math.sin(gs.bgHue*0.017));
-        int bgG=(int)(10+5*Math.sin(gs.bgHue*0.017+2));
-        int bgB=(int)(46+15*Math.sin(gs.bgHue*0.017+4));
-        if(gs.feverMode){
-            bgR=(int)(20+20*Math.sin(gs.feverHue*0.017));
-            bgG=(int)(5+15*Math.sin(gs.feverHue*0.017+2));
-            bgB=(int)(40+30*Math.sin(gs.feverHue*0.017+4));
+    public void drawBackground(Canvas c){
+        if(gs.isDark()){
+            int bgR=(int)(10+8*Math.sin(gs.bgHue*0.017));
+            int bgG=(int)(10+5*Math.sin(gs.bgHue*0.017+2));
+            int bgB=(int)(46+15*Math.sin(gs.bgHue*0.017+4));
+            if(gs.feverMode){bgR=(int)(20+20*Math.sin(gs.feverHue*0.017));
+                bgG=(int)(5+15*Math.sin(gs.feverHue*0.017+2));
+                bgB=(int)(40+30*Math.sin(gs.feverHue*0.017+4));}
+            c.drawColor(Color.rgb(bgR,bgG,bgB));
+        }else{
+            int bgR=(int)(220+15*Math.sin(gs.bgHue*0.017));
+            int bgG=(int)(220+10*Math.sin(gs.bgHue*0.017+2));
+            int bgB=(int)(235+15*Math.sin(gs.bgHue*0.017+4));
+            if(gs.feverMode){bgR=(int)(230+20*Math.sin(gs.feverHue*0.017));
+                bgG=(int)(215+15*Math.sin(gs.feverHue*0.017+2));
+                bgB=(int)(240+15*Math.sin(gs.feverHue*0.017+4));}
+            c.drawColor(Color.rgb(bgR,bgG,bgB));
         }
-        c.drawColor(Color.rgb(bgR,bgG,bgB));
     }
 
-    public void drawStars(Canvas c) {
+    public void drawStars(Canvas c){
         if(gs.stars==null)return;
         for(float[] s:gs.stars){
             int a=(int)(150+105*Math.sin(gs.animTime*0.02+s[0]));
+            if(!gs.isDark())a=(int)(60+40*Math.sin(gs.animTime*0.02+s[0]));
+            pf.pStarPaint.setColor(gs.isDark()?Color.WHITE:0xFF9999BB);
             pf.pStarPaint.setAlpha(Math.min(255,Math.max(0,a)));
             c.drawCircle(s[0],s[1],s[2],pf.pStarPaint);
         }
     }
 
-    public void drawVortex(Canvas c) {
+    public void drawVortex(Canvas c){
         int spirals=gs.feverMode?6:4;
         for(int i=0;i<spirals;i++){
             float ang=gs.vortexAngle+i*(360f/spirals);
             Path path=new Path();
-            for(int j=0;j<=50;j++){
-                float t=j/50f;
+            for(int j=0;j<=50;j++){float t=j/50f;
                 float a=(float)Math.toRadians(ang+t*360);
                 float rad=gs.innerRadius*0.6f*t;
                 float x=gs.centerX+rad*(float)Math.cos(a);
                 float y=gs.centerY+rad*(float)Math.sin(a);
-                if(j==0)path.moveTo(x,y);else path.lineTo(x,y);
-            }
+                if(j==0)path.moveTo(x,y);else path.lineTo(x,y);}
             float bl=(float)(Math.sin(gs.animTime*0.02+i)*0.5+0.5);
             if(gs.feverMode)pf.pVortex.setColor(Color.HSVToColor(new float[]{(gs.feverHue+i*60)%360,1,1}));
             else pf.pVortex.setColor(gs.blendCol(0xFF7B2FBE,0xFF00BFFF,bl));
@@ -67,7 +73,7 @@ public class Renderer {
         }
     }
 
-    public void drawOrbits(Canvas c) {
+    public void drawOrbits(Canvas c){
         if(gs.feverMode){
             int ci=Color.HSVToColor(new float[]{gs.feverHue,1,1});
             int co=Color.HSVToColor(new float[]{(gs.feverHue+180)%360,1,1});
@@ -87,52 +93,59 @@ public class Renderer {
         c.drawCircle(gs.centerX,gs.centerY,gs.outerRadius,pf.pOrbitOuter);
     }
 
-    public void drawMenu(Canvas c) {
+    public void drawMenu(Canvas c){
         pf.pTitle.setColor(0xFF00FFFF);
         pf.pTitle.setAlpha((int)(200+55*Math.sin(gs.animTime*0.05)));
-        c.drawText("NEON",gs.centerX,gs.centerY-180,pf.pTitle);
+        c.drawText("NEON",gs.centerX,gs.centerY-200,pf.pTitle);
         pf.pTitle.setColor(0xFFFF00FF);
         pf.pTitle.setAlpha((int)(200+55*Math.sin(gs.animTime*0.05+1)));
-        c.drawText("VORTEX",gs.centerX,gs.centerY-80,pf.pTitle);
-        pf.pSub.setTextSize(40);
+        c.drawText("VORTEX",gs.centerX,gs.centerY-100,pf.pTitle);
+        int tc=gs.isDark()?0xFFAAAAAA:0xFF555577;
+        pf.pSub.setColor(tc);pf.pSub.setTextSize(40);
         pf.pSub.setAlpha((int)(Math.sin(gs.animTime*0.04)*80+175));
-        c.drawText("TAP TO START",gs.centerX,gs.centerY+60,pf.pSub);
+        c.drawText("TAP TO START",gs.centerX,gs.centerY+40,pf.pSub);
         if(gs.highScore>0){pf.pHighScore.setAlpha(200);
-            c.drawText("BEST: "+gs.highScore,gs.centerX,gs.centerY+130,pf.pHighScore);}
+            c.drawText("BEST: "+gs.highScore,gs.centerX,gs.centerY+110,pf.pHighScore);}
         pf.pSub.setTextSize(26);pf.pSub.setAlpha(150);
-        c.drawText("Single Tap = Switch Orbit",gs.centerX,gs.centerY+200,pf.pSub);
-        c.drawText("Double Tap = Reverse Direction",gs.centerX,gs.centerY+236,pf.pSub);
-        c.drawText("Collect orbs & diamonds",gs.centerX,gs.centerY+272,pf.pSub);
-        c.drawText("5+ Combo = FEVER MODE!",gs.centerX,gs.centerY+308,pf.pSub);
+        c.drawText("Single Tap = Switch Orbit",gs.centerX,gs.centerY+170,pf.pSub);
+        c.drawText("Double Tap = Reverse",gs.centerX,gs.centerY+206,pf.pSub);
+
+        Paint sb=pf.makePaint(0xFFFF00FF,Paint.Style.STROKE,2f);
+        Paint sf=pf.makePaint(0xFFFF00FF,Paint.Style.FILL,0);
+        float bw=gs.screenW*0.4f,bh=gs.screenH*0.06f;
+        float bx=gs.centerX-bw/2,by=gs.centerY+240;
+        android.graphics.RectF r=new android.graphics.RectF(bx,by,bx+bw,by+bh);
+        float ba=(float)(0.5+0.3*Math.sin(gs.animTime*0.04));
+        sf.setAlpha((int)(ba*120));c.drawRoundRect(r,16,16,sf);
+        c.drawRoundRect(r,16,16,sb);
+        Paint bt=pf.makeText(Color.WHITE,32,true);
+        c.drawText("\u2699 SETTINGS",gs.centerX,by+bh/2+12,bt);
     }
 
-    public void drawHUD(Canvas c) {
-        pf.pScore.setAlpha(220);
+    public float[] getSettingsBtnBounds(){
+        float bw=gs.screenW*0.4f,bh=gs.screenH*0.06f;
+        float bx=gs.centerX-bw/2,by=gs.centerY+240;
+        return new float[]{bx,by,bx+bw,by+bh};
+    }
+
+    public void drawHUD(Canvas c){
+        int tc=gs.isDark()?Color.WHITE:0xFF1A1A2E;
+        pf.pScore.setColor(tc);pf.pScore.setAlpha(220);
         c.drawText(String.valueOf(gs.score),gs.centerX,120,pf.pScore);
-        if(gs.combo>1){
-            pf.pCombo.setAlpha((int)(200+55*Math.sin(gs.animTime*0.1)));
+        if(gs.combo>1){pf.pCombo.setAlpha((int)(200+55*Math.sin(gs.animTime*0.1)));
             pf.pCombo.setTextSize(Math.min(70,40+gs.combo*3));
-            c.drawText("x"+String.format("%.1f",gs.scoreMultiplier)+" COMBO!",gs.centerX,185,pf.pCombo);
-        }
-        if(gs.feverMode){
-            pf.pFever.setColor(Color.HSVToColor(new float[]{gs.feverHue,1,1}));
-            pf.pFever.setAlpha((int)(200+55*Math.sin(gs.animTime*0.15)));
-            pf.pFever.setTextSize(35);
-            c.drawText("FEVER x3",gs.centerX,225,pf.pFever);
-        }
-        if(gs.nearMissTextTimer>0){
-            pf.pNearMiss.setAlpha((int)(gs.nearMissTextTimer/45f*255));
-            c.drawText(gs.nearMissText,gs.centerX,gs.centerY+gs.outerRadius+80,pf.pNearMiss);
-        }
-        pf.pPause.setTextSize(40);pf.pPause.setAlpha(150);
+            c.drawText("x"+String.format("%.1f",gs.scoreMultiplier)+" COMBO!",gs.centerX,185,pf.pCombo);}
+        if(gs.feverMode){pf.pFever.setColor(Color.HSVToColor(new float[]{gs.feverHue,1,1}));
+            pf.pFever.setAlpha((int)(200+55*Math.sin(gs.animTime*0.15)));pf.pFever.setTextSize(35);
+            c.drawText("FEVER x3",gs.centerX,225,pf.pFever);}
+        if(gs.nearMissTextTimer>0){pf.pNearMiss.setAlpha((int)(gs.nearMissTextTimer/45f*255));
+            c.drawText(gs.nearMissText,gs.centerX,gs.centerY+gs.outerRadius+80,pf.pNearMiss);}
+        pf.pPause.setColor(tc);pf.pPause.setTextSize(40);pf.pPause.setAlpha(150);
         pf.pPause.setTextAlign(Paint.Align.RIGHT);
         c.drawText("||",gs.screenW-40,60,pf.pPause);
         pf.pPause.setTextAlign(Paint.Align.CENTER);
-        if(gs.moveDirection==-1){
-            pf.pReverse.setAlpha((int)(150+100*Math.sin(gs.animTime*0.08)));
-            pf.pReverse.setTextSize(26);
-            c.drawText("< REVERSE >",gs.centerX,gs.screenH-100,pf.pReverse);
-        }
+        if(gs.moveDirection==-1){pf.pReverse.setAlpha((int)(150+100*Math.sin(gs.animTime*0.08)));
+            pf.pReverse.setTextSize(26);c.drawText("< REVERSE >",gs.centerX,gs.screenH-100,pf.pReverse);}
         float barY=gs.screenH-60;
         if(gs.shieldActive)drawPowerBar(c,30,barY,gs.shieldTimer/300f,0xFF4488FF,"SHIELD");
         if(gs.slowmoActive)drawPowerBar(c,30,barY-25,gs.slowmoTimer/240f,0xFF44FF44,"SLOW");
@@ -140,31 +153,30 @@ public class Renderer {
     }
 
     private void drawPowerBar(Canvas c,float x,float y,float pct,int col,String label){
-        Paint bg=pf.makePaint(0xFF333333,Paint.Style.FILL,0);
-        float w=gs.screenW-60;
-        c.drawRect(x,y,x+w,y+16,bg);
+        Paint bg=pf.makePaint(gs.isDark()?0xFF333333:0xFFCCCCCC,Paint.Style.FILL,0);
+        float w=gs.screenW-60;c.drawRect(x,y,x+w,y+16,bg);
         Paint fg=pf.makePaint(col,Paint.Style.FILL,0);fg.setAlpha(200);
         c.drawRect(x,y,x+w*pct,y+16,fg);
-        Paint tl=pf.makeText(Color.WHITE,14,false);
+        Paint tl=pf.makeText(gs.isDark()?Color.WHITE:0xFF222222,14,false);
         tl.setTextAlign(Paint.Align.LEFT);tl.setAlpha(200);
         c.drawText(label,x+5,y+13,tl);
     }
 
-    public void drawPauseScreen(Canvas c) {
+    public void drawPauseScreen(Canvas c){
         c.drawColor(Color.argb(180,0,0,0));
-        pf.pPause.setTextSize(80);pf.pPause.setAlpha(255);
+        pf.pPause.setColor(Color.WHITE);pf.pPause.setTextSize(80);pf.pPause.setAlpha(255);
         pf.pPause.setTextAlign(Paint.Align.CENTER);
         c.drawText("PAUSED",gs.centerX,gs.centerY-40,pf.pPause);
-        pf.pSub.setAlpha((int)(Math.sin(gs.animTime*0.04)*80+175));
-        pf.pSub.setTextSize(40);
+        pf.pSub.setColor(0xFFAAAAAA);
+        pf.pSub.setAlpha((int)(Math.sin(gs.animTime*0.04)*80+175));pf.pSub.setTextSize(40);
         c.drawText("TAP TO RESUME",gs.centerX,gs.centerY+40,pf.pSub);
     }
 
-    public void drawGameOverUI(Canvas c) {
+    public void drawGameOverUI(Canvas c){
         c.drawColor(Color.argb(180,0,0,0));
         pf.pGameOver.setAlpha((int)(200+55*Math.sin(gs.animTime*0.05)));
         c.drawText("GAME OVER",gs.centerX,gs.centerY-180,pf.pGameOver);
-        pf.pScore.setAlpha(255);pf.pScore.setTextSize(90);
+        pf.pScore.setColor(Color.WHITE);pf.pScore.setAlpha(255);pf.pScore.setTextSize(90);
         c.drawText(String.valueOf(gs.score),gs.centerX,gs.centerY-70,pf.pScore);
         pf.pScore.setTextSize(80);
         if(gs.isNewBest){pf.pHighScore.setColor(0xFFFFD700);
@@ -172,7 +184,7 @@ public class Renderer {
             pf.pHighScore.setColor(0xFF888888);
         }else{pf.pHighScore.setAlpha(200);
             c.drawText("BEST: "+gs.highScore,gs.centerX,gs.centerY-10,pf.pHighScore);}
-        pf.pStat.setAlpha(180);
+        pf.pStat.setColor(0xFFAAAAAA);pf.pStat.setAlpha(180);
         c.drawText("Time: "+String.format("%.1f",gs.survivalTime)+"s",gs.centerX,gs.centerY+50,pf.pStat);
         c.drawText("Orbs: "+gs.totalOrbs+"  Diamonds: "+gs.totalDiamonds,gs.centerX,gs.centerY+90,pf.pStat);
         c.drawText("Near Miss: "+gs.totalNearMiss+"  Reverses: "+gs.totalReverse,gs.centerX,gs.centerY+130,pf.pStat);
@@ -182,17 +194,13 @@ public class Renderer {
         c.drawText("TAP TO RETRY",gs.centerX,gs.centerY+240,pf.pRestart);
     }
 
-    public void drawOverlays(Canvas c) {
-        if(gs.levelPopTimer>0){
-            pf.pLevel.setColor(gs.hsvColor(gs.bgHue+180,0.8f,1f));
+    public void drawOverlays(Canvas c){
+        if(gs.levelPopTimer>0){pf.pLevel.setColor(gs.hsvColor(gs.bgHue+180,0.8f,1f));
             pf.pLevel.setAlpha((int)(gs.levelPopTimer/120f*255));
-            c.drawText("LEVEL "+gs.level,gs.centerX,gs.centerY-gs.outerRadius-60,pf.pLevel);
-        }
+            c.drawText("LEVEL "+gs.level,gs.centerX,gs.centerY-gs.outerRadius-60,pf.pLevel);}
         if(gs.deathFlash>0)c.drawColor(Color.argb((int)(gs.deathFlash*200),255,255,255));
-        if(gs.nearMissFlash>0){
-            int nr=gs.playerOnOuter?255:0,ng=gs.playerOnOuter?0:255;
-            c.drawColor(Color.argb((int)(gs.nearMissFlash*30),nr,ng,255));
-        }
+        if(gs.nearMissFlash>0){int nr=gs.playerOnOuter?255:0,ng=gs.playerOnOuter?0:255;
+            c.drawColor(Color.argb((int)(gs.nearMissFlash*30),nr,ng,255));}
         if(gs.reverseFlash>0)c.drawColor(Color.argb((int)(gs.reverseFlash*40),255,136,0));
         if(gs.feverFlash>0)c.drawColor(Color.argb((int)(gs.feverFlash*50),255,0,255));
     }

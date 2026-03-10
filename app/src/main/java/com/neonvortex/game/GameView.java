@@ -2,7 +2,6 @@ package com.neonvortex.game;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -23,7 +22,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private static final int STATE_GAME_OVER = 2;
 
     private Thread gameThread;
-    private boolean isRunning;
+    private volatile boolean isRunning;
     private int gameState = STATE_MENU;
 
     private int screenW, screenH;
@@ -66,15 +65,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private Random rand = new Random();
     private SharedPreferences prefs;
 
-    private Paint pBg, pInnerOrbit, pOuterOrbit, pPlayer, pPlayerGlow;
-    private Paint pScore, pHighScore, pTitle, pSub, pGameOver, pRestart;
-    private Paint pCombo, pNearMiss, pParticle, pTrail, pVortex;
+    private Paint pBg, pPlayer, pScore, pHighScore, pTitle, pSub;
+    private Paint pGameOver, pRestart, pCombo, pNearMiss, pParticle, pTrail;
+    private Paint pGlow, pOrbitInner, pOrbitOuter, pOrbitGlowInner, pOrbitGlowOuter;
+    private Paint pObstacle, pObstacleCore, pObstacleGlow;
+    private Paint pOrbBody, pOrbGlow, pOrbShine, pVortex, pPlayerInner, pStarPaint;
 
     public GameView(Context context) {
         super(context);
         getHolder().addCallback(this);
         setFocusable(true);
-        setLayerType(LAYER_TYPE_SOFTWARE, null);
         prefs = context.getSharedPreferences("neonvortex", Context.MODE_PRIVATE);
         highScore = prefs.getInt("highscore", 0);
         initPaints();
@@ -84,23 +84,35 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         pBg = new Paint();
         pBg.setColor(Color.parseColor("#0A0A2E"));
 
-        pInnerOrbit = new Paint(Paint.ANTI_ALIAS_FLAG);
-        pInnerOrbit.setColor(Color.parseColor("#00FFFF"));
-        pInnerOrbit.setStyle(Paint.Style.STROKE);
-        pInnerOrbit.setStrokeWidth(6f);
+        pOrbitInner = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pOrbitInner.setColor(Color.parseColor("#00FFFF"));
+        pOrbitInner.setStyle(Paint.Style.STROKE);
+        pOrbitInner.setStrokeWidth(5f);
 
-        pOuterOrbit = new Paint(Paint.ANTI_ALIAS_FLAG);
-        pOuterOrbit.setColor(Color.parseColor("#FF00FF"));
-        pOuterOrbit.setStyle(Paint.Style.STROKE);
-        pOuterOrbit.setStrokeWidth(6f);
+        pOrbitOuter = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pOrbitOuter.setColor(Color.parseColor("#FF00FF"));
+        pOrbitOuter.setStyle(Paint.Style.STROKE);
+        pOrbitOuter.setStrokeWidth(5f);
+
+        pOrbitGlowInner = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pOrbitGlowInner.setColor(Color.parseColor("#00FFFF"));
+        pOrbitGlowInner.setStyle(Paint.Style.STROKE);
+        pOrbitGlowInner.setStrokeWidth(20f);
+
+        pOrbitGlowOuter = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pOrbitGlowOuter.setColor(Color.parseColor("#FF00FF"));
+        pOrbitGlowOuter.setStyle(Paint.Style.STROKE);
+        pOrbitGlowOuter.setStrokeWidth(20f);
 
         pPlayer = new Paint(Paint.ANTI_ALIAS_FLAG);
         pPlayer.setColor(Color.WHITE);
         pPlayer.setStyle(Paint.Style.FILL);
 
-        pPlayerGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
-        pPlayerGlow.setStyle(Paint.Style.FILL);
-        pPlayerGlow.setMaskFilter(new BlurMaskFilter(30, BlurMaskFilter.Blur.OUTER));
+        pPlayerInner = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pPlayerInner.setStyle(Paint.Style.FILL);
+
+        pGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pGlow.setStyle(Paint.Style.FILL);
 
         pScore = new Paint(Paint.ANTI_ALIAS_FLAG);
         pScore.setColor(Color.WHITE);
@@ -114,7 +126,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         pHighScore.setTextAlign(Paint.Align.CENTER);
 
         pTitle = new Paint(Paint.ANTI_ALIAS_FLAG);
-        pTitle.setColor(Color.WHITE);
         pTitle.setTextSize(100);
         pTitle.setTextAlign(Paint.Align.CENTER);
         pTitle.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
@@ -156,6 +167,37 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         pVortex = new Paint(Paint.ANTI_ALIAS_FLAG);
         pVortex.setStyle(Paint.Style.STROKE);
         pVortex.setStrokeWidth(3f);
+
+        pObstacle = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pObstacle.setStyle(Paint.Style.STROKE);
+        pObstacle.setStrokeWidth(14);
+        pObstacle.setStrokeCap(Paint.Cap.ROUND);
+
+        pObstacleCore = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pObstacleCore.setStyle(Paint.Style.STROKE);
+        pObstacleCore.setStrokeWidth(6);
+        pObstacleCore.setStrokeCap(Paint.Cap.ROUND);
+
+        pObstacleGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pObstacleGlow.setStyle(Paint.Style.STROKE);
+        pObstacleGlow.setStrokeWidth(24);
+        pObstacleGlow.setStrokeCap(Paint.Cap.ROUND);
+
+        pOrbBody = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pOrbBody.setColor(Color.parseColor("#FFD700"));
+        pOrbBody.setStyle(Paint.Style.FILL);
+
+        pOrbGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pOrbGlow.setColor(Color.parseColor("#FFD700"));
+        pOrbGlow.setStyle(Paint.Style.FILL);
+
+        pOrbShine = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pOrbShine.setColor(Color.WHITE);
+        pOrbShine.setStyle(Paint.Style.FILL);
+
+        pStarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pStarPaint.setColor(Color.WHITE);
+        pStarPaint.setStyle(Paint.Style.FILL);
     }
 
     @Override
@@ -190,7 +232,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         isRunning = false;
-        try { gameThread.join(); } catch (InterruptedException e) {}
+        try { if (gameThread != null) gameThread.join(); } catch (InterruptedException e) {}
     }
 
     @Override
@@ -264,10 +306,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         Iterator<float[]> oi = obstacles.iterator();
         while (oi.hasNext()) {
             float[] o = oi.next();
-            o[0] += o[2]; // angle += speed
+            o[0] += o[2];
             if (o[0] >= 360) o[0] -= 360;
             if (o[0] < 0) o[0] += 360;
-            o[4]--; // life
+            o[4]--;
             if (o[4] <= 0) { oi.remove(); continue; }
 
             boolean obsOuter = o[1] == 1;
@@ -295,7 +337,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             float[] orb = ri.next();
             orb[0] += orb[2];
             if (orb[0] >= 360) orb[0] -= 360;
-            orb[3] += 0.1f; // pulse
+            orb[3] += 0.1f;
             orb[4]--;
             if (orb[4] <= 0) { ri.remove(); continue; }
 
@@ -339,25 +381,31 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (gameState == STATE_MENU) drawMenu(c);
             else if (gameState == STATE_PLAYING) drawHUD(c);
             else drawGameOverUI(c);
-            if (deathFlash > 0) c.drawColor(Color.argb((int)(deathFlash * 255), 255, 255, 255));
+            if (deathFlash > 0) {
+                c.drawColor(Color.argb((int)(deathFlash * 200), 255, 255, 255));
+            }
             if (nearMissFlash > 0) {
-                int nc = playerOnOuter ? Color.parseColor("#FF00FF") : Color.parseColor("#00FFFF");
-                c.drawColor(Color.argb((int)(nearMissFlash * 40), Color.red(nc), Color.green(nc), Color.blue(nc)));
+                int nr = playerOnOuter ? 255 : 0;
+                int ng = playerOnOuter ? 0 : 255;
+                int nb = 255;
+                c.drawColor(Color.argb((int)(nearMissFlash * 30), nr, ng, nb));
             }
             c.restore();
         } catch (Exception e) {
         } finally {
-            if (c != null) try { h.unlockCanvasAndPost(c); } catch (Exception e) {}
+            if (c != null) {
+                try { h.unlockCanvasAndPost(c); } catch (Exception e) {}
+            }
         }
     }
 
     private void drawStars(Canvas c) {
         if (stars == null) return;
-        Paint sp = new Paint(Paint.ANTI_ALIAS_FLAG);
         for (float[] s : stars) {
             int a = (int)(150 + 105 * Math.sin(animTime * 0.02 + s[0]));
-            sp.setColor(Color.argb(Math.min(255, Math.max(0, a)), 255, 255, 255));
-            c.drawCircle(s[0], s[1], s[2], sp);
+            a = Math.min(255, Math.max(0, a));
+            pStarPaint.setAlpha(a);
+            c.drawCircle(s[0], s[1], s[2], pStarPaint);
         }
     }
 
@@ -368,54 +416,55 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             Path path = new Path();
             for (int j = 0; j <= 50; j++) {
                 float t = j / 50f;
-                float a = (float)Math.toRadians(ang + t * 360);
+                float a = (float) Math.toRadians(ang + t * 360);
                 float rad = r * t;
-                float x = centerX + rad * (float)Math.cos(a);
-                float y = centerY + rad * (float)Math.sin(a);
-                if (j == 0) path.moveTo(x, y); else path.lineTo(x, y);
+                float x = centerX + rad * (float) Math.cos(a);
+                float y = centerY + rad * (float) Math.sin(a);
+                if (j == 0) path.moveTo(x, y);
+                else path.lineTo(x, y);
             }
-            float blend = (float)(Math.sin(animTime * 0.02 + i) * 0.5 + 0.5);
+            float blend = (float) (Math.sin(animTime * 0.02 + i) * 0.5 + 0.5);
             int col = blendCol(Color.parseColor("#7B2FBE"), Color.parseColor("#00BFFF"), blend);
             pVortex.setColor(col);
-            pVortex.setAlpha((int)(100 + 50 * Math.sin(animTime * 0.03 + i)));
+            pVortex.setAlpha((int) (80 + 40 * Math.sin(animTime * 0.03 + i)));
             pVortex.setStrokeWidth(2 + i * 0.5f);
             c.drawPath(path, pVortex);
         }
     }
 
     private void drawOrbits(Canvas c) {
-        Paint gi = new Paint(Paint.ANTI_ALIAS_FLAG);
-        gi.setColor(Color.parseColor("#00FFFF"));
-        gi.setStyle(Paint.Style.STROKE);
-        gi.setStrokeWidth(18);
-        gi.setAlpha(40);
-        gi.setMaskFilter(new BlurMaskFilter(20, BlurMaskFilter.Blur.NORMAL));
-        c.drawCircle(centerX, centerY, innerRadius, gi);
-        pInnerOrbit.setAlpha((int)(180 + 75 * Math.sin(animTime * 0.03)));
-        c.drawCircle(centerX, centerY, innerRadius, pInnerOrbit);
+        int alphaI = (int) (30 + 15 * Math.sin(animTime * 0.03));
+        pOrbitGlowInner.setAlpha(alphaI);
+        c.drawCircle(centerX, centerY, innerRadius, pOrbitGlowInner);
+        pOrbitInner.setAlpha((int) (180 + 75 * Math.sin(animTime * 0.03)));
+        c.drawCircle(centerX, centerY, innerRadius, pOrbitInner);
 
-        Paint go = new Paint(Paint.ANTI_ALIAS_FLAG);
-        go.setColor(Color.parseColor("#FF00FF"));
-        go.setStyle(Paint.Style.STROKE);
-        go.setStrokeWidth(18);
-        go.setAlpha(40);
-        go.setMaskFilter(new BlurMaskFilter(20, BlurMaskFilter.Blur.NORMAL));
-        c.drawCircle(centerX, centerY, outerRadius, go);
-        pOuterOrbit.setAlpha((int)(180 + 75 * Math.sin(animTime * 0.03 + 1)));
-        c.drawCircle(centerX, centerY, outerRadius, pOuterOrbit);
+        int alphaO = (int) (30 + 15 * Math.sin(animTime * 0.03 + 1));
+        pOrbitGlowOuter.setAlpha(alphaO);
+        c.drawCircle(centerX, centerY, outerRadius, pOrbitGlowOuter);
+        pOrbitOuter.setAlpha((int) (180 + 75 * Math.sin(animTime * 0.03 + 1)));
+        c.drawCircle(centerX, centerY, outerRadius, pOrbitOuter);
     }
 
     private void drawPlayer(Canvas c) {
         float rad = playerOnOuter ? outerRadius : innerRadius;
-        float px = centerX + rad * (float)Math.cos(Math.toRadians(playerAngle));
-        float py = centerY + rad * (float)Math.sin(Math.toRadians(playerAngle));
-        pPlayerGlow.setColor(playerOnOuter ? Color.parseColor("#FF00FF") : Color.parseColor("#00FFFF"));
-        pPlayerGlow.setAlpha(120);
-        c.drawCircle(px, py, playerSize + 12, pPlayerGlow);
+        float px = centerX + rad * (float) Math.cos(Math.toRadians(playerAngle));
+        float py = centerY + rad * (float) Math.sin(Math.toRadians(playerAngle));
+
+        int glowCol = playerOnOuter ? Color.parseColor("#FF00FF") : Color.parseColor("#00FFFF");
+        pGlow.setColor(glowCol);
+        pGlow.setAlpha(30);
+        c.drawCircle(px, py, playerSize + 25, pGlow);
+        pGlow.setAlpha(50);
+        c.drawCircle(px, py, playerSize + 15, pGlow);
+        pGlow.setAlpha(80);
+        c.drawCircle(px, py, playerSize + 8, pGlow);
+
         c.drawCircle(px, py, playerSize, pPlayer);
-        Paint ic = new Paint(Paint.ANTI_ALIAS_FLAG);
-        ic.setColor(playerOnOuter ? Color.parseColor("#FF88FF") : Color.parseColor("#88FFFF"));
-        c.drawCircle(px, py, playerSize * 0.5f, ic);
+
+        int innerCol = playerOnOuter ? Color.parseColor("#FF88FF") : Color.parseColor("#88FFFF");
+        pPlayerInner.setColor(innerCol);
+        c.drawCircle(px, py, playerSize * 0.5f, pPlayerInner);
     }
 
     private void drawObstacles(Canvas c) {
@@ -423,119 +472,118 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             float rad = o[1] == 1 ? outerRadius : innerRadius;
             float start = o[0] - o[3] / 2;
             RectF ov = new RectF(centerX - rad, centerY - rad, centerX + rad, centerY + rad);
-            float pulse = (float)(Math.sin(animTime * 0.15) * 0.5 + 0.5);
+            float pulse = (float) (Math.sin(animTime * 0.15) * 0.5 + 0.5);
             int col = blendCol(Color.parseColor("#FF4444"), Color.parseColor("#FF8800"), pulse);
 
-            Paint gl = new Paint(Paint.ANTI_ALIAS_FLAG);
-            gl.setColor(col); gl.setStyle(Paint.Style.STROKE);
-            gl.setStrokeWidth(22); gl.setAlpha(60); gl.setStrokeCap(Paint.Cap.ROUND);
-            gl.setMaskFilter(new BlurMaskFilter(15, BlurMaskFilter.Blur.NORMAL));
-            c.drawArc(ov, start, o[3], false, gl);
+            pObstacleGlow.setColor(col);
+            pObstacleGlow.setAlpha(40);
+            c.drawArc(ov, start, o[3], false, pObstacleGlow);
 
-            Paint sl = new Paint(Paint.ANTI_ALIAS_FLAG);
-            sl.setColor(col); sl.setStyle(Paint.Style.STROKE);
-            sl.setStrokeWidth(14); sl.setStrokeCap(Paint.Cap.ROUND);
-            c.drawArc(ov, start, o[3], false, sl);
+            pObstacle.setColor(col);
+            pObstacle.setAlpha(230);
+            c.drawArc(ov, start, o[3], false, pObstacle);
 
-            Paint br = new Paint(Paint.ANTI_ALIAS_FLAG);
-            br.setColor(Color.parseColor("#FFCC00")); br.setStyle(Paint.Style.STROKE);
-            br.setStrokeWidth(6); br.setStrokeCap(Paint.Cap.ROUND);
-            br.setAlpha((int)(150 + 105 * pulse));
-            c.drawArc(ov, start, o[3], false, br);
+            pObstacleCore.setColor(Color.parseColor("#FFCC00"));
+            pObstacleCore.setAlpha((int) (150 + 105 * pulse));
+            c.drawArc(ov, start, o[3], false, pObstacleCore);
         }
     }
 
     private void drawOrbs(Canvas c) {
-        Paint og = new Paint(Paint.ANTI_ALIAS_FLAG);
-        og.setColor(Color.parseColor("#FFD700"));
-        og.setMaskFilter(new BlurMaskFilter(25, BlurMaskFilter.Blur.OUTER));
-        Paint ob = new Paint(Paint.ANTI_ALIAS_FLAG);
-        ob.setColor(Color.parseColor("#FFD700"));
-        Paint sk = new Paint(Paint.ANTI_ALIAS_FLAG);
-        sk.setColor(Color.WHITE);
-
         for (float[] orb : orbs) {
             float rad = orb[1] == 1 ? outerRadius : innerRadius;
-            float ox = centerX + rad * (float)Math.cos(Math.toRadians(orb[0]));
-            float oy = centerY + rad * (float)Math.sin(Math.toRadians(orb[0]));
-            float ps = (float)(1 + 0.2 * Math.sin(orb[3]));
+            float ox = centerX + rad * (float) Math.cos(Math.toRadians(orb[0]));
+            float oy = centerY + rad * (float) Math.sin(Math.toRadians(orb[0]));
+            float ps = (float) (1 + 0.2 * Math.sin(orb[3]));
             float sz = playerSize * 0.8f * ps;
-            og.setAlpha(100);
-            c.drawCircle(ox, oy, sz + 15, og);
-            c.drawCircle(ox, oy, sz, ob);
-            sk.setAlpha((int)(200 * Math.abs(Math.sin(orb[3] * 2))));
-            c.drawCircle(ox - sz * 0.3f, oy - sz * 0.3f, sz * 0.3f, sk);
+
+            pOrbGlow.setAlpha(40);
+            c.drawCircle(ox, oy, sz + 20, pOrbGlow);
+            pOrbGlow.setAlpha(70);
+            c.drawCircle(ox, oy, sz + 10, pOrbGlow);
+
+            c.drawCircle(ox, oy, sz, pOrbBody);
+
+            pOrbShine.setAlpha((int) (180 * Math.abs(Math.sin(orb[3] * 2))));
+            c.drawCircle(ox - sz * 0.3f, oy - sz * 0.3f, sz * 0.3f, pOrbShine);
         }
     }
 
     private void drawTrail(Canvas c) {
         for (int i = 0; i < trail.size(); i++) {
             float[] t = trail.get(i);
-            float alpha = (float)(i + 1) / trail.size();
-            pTrail.setColor((int)t[2]);
-            pTrail.setAlpha((int)(alpha * 100));
+            float alpha = (float) (i + 1) / trail.size();
+            pTrail.setColor((int) t[2]);
+            pTrail.setAlpha((int) (alpha * 80));
             c.drawCircle(t[0], t[1], playerSize * alpha * 0.7f, pTrail);
         }
     }
 
     private void drawParticles(Canvas c) {
         for (float[] p : particles) {
-            pParticle.setColor((int)p[4]);
-            pParticle.setAlpha((int)(p[5] * 255));
+            pParticle.setColor((int) p[4]);
+            pParticle.setAlpha((int) (p[5] * 255));
             c.drawCircle(p[0], p[1], p[6], pParticle);
         }
     }
 
     private void drawMenu(Canvas c) {
         pTitle.setColor(Color.parseColor("#00FFFF"));
-        pTitle.setAlpha((int)(200 + 55 * Math.sin(animTime * 0.05)));
+        pTitle.setAlpha((int) (200 + 55 * Math.sin(animTime * 0.05)));
         c.drawText("NEON", centerX, centerY - 180, pTitle);
         pTitle.setColor(Color.parseColor("#FF00FF"));
-        pTitle.setAlpha((int)(200 + 55 * Math.sin(animTime * 0.05 + 1)));
+        pTitle.setAlpha((int) (200 + 55 * Math.sin(animTime * 0.05 + 1)));
         c.drawText("VORTEX", centerX, centerY - 80, pTitle);
-        float sa = (float)(Math.sin(animTime * 0.04) * 0.3 + 0.7);
-        pSub.setAlpha((int)(sa * 255));
+
+        float sa = (float) (Math.sin(animTime * 0.04) * 0.3 + 0.7);
+        pSub.setAlpha((int) (sa * 255));
         pSub.setTextSize(40);
         c.drawText("TAP TO START", centerX, centerY + 60, pSub);
+
         if (highScore > 0) {
             pHighScore.setAlpha(200);
             c.drawText("BEST: " + highScore, centerX, centerY + 140, pHighScore);
         }
-        pSub.setTextSize(30); pSub.setAlpha(150);
+
+        pSub.setTextSize(30);
+        pSub.setAlpha(150);
         c.drawText("Tap to switch orbits", centerX, centerY + 220, pSub);
-        c.drawText("Avoid barriers \u2022 Collect orbs", centerX, centerY + 270, pSub);
+        c.drawText("Avoid barriers - Collect orbs", centerX, centerY + 270, pSub);
     }
 
     private void drawHUD(Canvas c) {
         pScore.setAlpha(220);
         c.drawText(String.valueOf(score), centerX, 120, pScore);
         if (combo > 1) {
-            pCombo.setAlpha((int)(200 + 55 * Math.sin(animTime * 0.1)));
+            pCombo.setAlpha((int) (200 + 55 * Math.sin(animTime * 0.1)));
             pCombo.setTextSize(Math.min(70, 40 + combo * 3));
             c.drawText("x" + String.format("%.1f", scoreMultiplier) + " COMBO!", centerX, 180, pCombo);
         }
         if (nearMissTextTimer > 0) {
-            pNearMiss.setAlpha((int)(nearMissTextTimer / 45f * 255));
+            pNearMiss.setAlpha((int) (nearMissTextTimer / 45f * 255));
             c.drawText(nearMissText, centerX, centerY + outerRadius + 80, pNearMiss);
         }
     }
 
     private void drawGameOverUI(Canvas c) {
         c.drawColor(Color.argb(150, 0, 0, 0));
-        pGameOver.setAlpha((int)(200 + 55 * Math.sin(animTime * 0.05)));
+        pGameOver.setAlpha((int) (200 + 55 * Math.sin(animTime * 0.05)));
         c.drawText("GAME OVER", centerX, centerY - 100, pGameOver);
+
         pScore.setAlpha(255);
         c.drawText(String.valueOf(score), centerX, centerY + 20, pScore);
+
         if (score >= highScore && score > 0) {
             pHighScore.setColor(Color.parseColor("#FFD700"));
-            c.drawText("\u2605 NEW BEST! \u2605", centerX, centerY + 80, pHighScore);
+            c.drawText("NEW BEST!", centerX, centerY + 80, pHighScore);
             pHighScore.setColor(Color.parseColor("#888888"));
         } else {
             pHighScore.setAlpha(200);
             c.drawText("BEST: " + highScore, centerX, centerY + 80, pHighScore);
         }
-        float ra = (float)(Math.sin(animTime * 0.04) * 0.3 + 0.7);
-        pRestart.setAlpha((int)(ra * 255));
+
+        float ra = (float) (Math.sin(animTime * 0.04) * 0.3 + 0.7);
+        pRestart.setAlpha((int) (ra * 255));
         c.drawText("TAP TO RETRY", centerX, centerY + 180, pRestart);
     }
 
@@ -562,8 +610,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void switchOrbit() {
         playerOnOuter = !playerOnOuter;
         float rad = playerOnOuter ? outerRadius : innerRadius;
-        float px = centerX + rad * (float)Math.cos(Math.toRadians(playerAngle));
-        float py = centerY + rad * (float)Math.sin(Math.toRadians(playerAngle));
+        float px = centerX + rad * (float) Math.cos(Math.toRadians(playerAngle));
+        float py = centerY + rad * (float) Math.sin(Math.toRadians(playerAngle));
         int col = playerOnOuter ? Color.parseColor("#FF00FF") : Color.parseColor("#00FFFF");
         for (int i = 0; i < 8; i++) spawnParticle(px, py, col, true);
         shakeMag = 3f;
@@ -571,7 +619,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private void gameOver(float px, float py) {
         gameState = STATE_GAME_OVER;
-        deathFlash = 1f; shakeMag = 30f;
+        deathFlash = 1f;
+        shakeMag = 30f;
         for (int i = 0; i < 50; i++) spawnParticle(px, py, Color.WHITE, false);
         for (int i = 0; i < 30; i++) spawnParticle(px, py, Color.parseColor("#FF4444"), false);
         for (int i = 0; i < 20; i++) {
@@ -585,7 +634,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void spawnObstacle() {
-        // [angle, isOuter, speed, arcLength, life, nearMissGiven]
         float[] o = new float[6];
         o[0] = rand.nextFloat() * 360;
         o[1] = rand.nextBoolean() ? 1 : 0;
@@ -607,7 +655,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void spawnOrb() {
-        // [angle, isOuter, speed, pulse, life]
         float[] orb = new float[5];
         orb[0] = rand.nextFloat() * 360;
         orb[1] = rand.nextBoolean() ? 1 : 0;
@@ -618,13 +665,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void spawnParticle(float x, float y, int color, boolean small) {
-        // [x, y, vx, vy, color, alpha, size]
         float[] p = new float[7];
         p[0] = x; p[1] = y;
         float angle = rand.nextFloat() * 360;
         float speed = small ? rand.nextFloat() * 3 + 1 : rand.nextFloat() * 8 + 2;
-        p[2] = speed * (float)Math.cos(Math.toRadians(angle));
-        p[3] = speed * (float)Math.sin(Math.toRadians(angle));
+        p[2] = speed * (float) Math.cos(Math.toRadians(angle));
+        p[3] = speed * (float) Math.sin(Math.toRadians(angle));
         p[4] = color;
         p[5] = 1f;
         p[6] = small ? rand.nextFloat() * 4 + 2 : rand.nextFloat() * 6 + 3;
@@ -648,9 +694,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private int blendCol(int c1, int c2, float r) {
-        int red = (int)(Color.red(c1) * (1 - r) + Color.red(c2) * r);
-        int grn = (int)(Color.green(c1) * (1 - r) + Color.green(c2) * r);
-        int blu = (int)(Color.blue(c1) * (1 - r) + Color.blue(c2) * r);
+        int red = (int) (Color.red(c1) * (1 - r) + Color.red(c2) * r);
+        int grn = (int) (Color.green(c1) * (1 - r) + Color.green(c2) * r);
+        int blu = (int) (Color.blue(c1) * (1 - r) + Color.blue(c2) * r);
         return Color.rgb(red, grn, blu);
     }
 
@@ -659,5 +705,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         try { if (gameThread != null) gameThread.join(); } catch (InterruptedException e) {}
     }
 
-    public void resume() {}
+    public void resume() {
+    }
 }
